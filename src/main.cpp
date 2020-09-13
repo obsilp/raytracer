@@ -1,21 +1,30 @@
 #include <iostream>
+#include <random>
+#include <chrono>
 
 #include <glm/glm.hpp>
-#include <random>
+#include <optional>
 
 #include "bmp.h"
 
-const float INF = std::numeric_limits<float>::infinity();
+#undef INFINITY
+
+const float INFINITY = std::numeric_limits<float>::infinity();
 const float PI = 3.1415926535897932385;
+const float EPSILON = 0.0001f;
 
 inline float deg2rad(float d) {
 	return d * PI / 180.0;
 }
 
-inline float rand_float() {
-	static std::uniform_real_distribution<float> d(0.0, 1.0);
+inline float rand_float(float min, float max) {
+	static std::uniform_real_distribution<float> d(min, max);
 	static std::mt19937 g;
 	return d(g);
+}
+
+inline float rand_float() {
+	return rand_float(0.0, 1.0);
 }
 
 struct Camera {
@@ -66,11 +75,11 @@ glm::vec3 ray_at(const Ray &ray, float t) {
 }
 
 struct HitRecord {
-	bool hit;
+	float distance;
 
-	float depth;
 	glm::vec3 position;
 	glm::vec3 normal;
+
 	bool front_facing;
 };
 
@@ -79,13 +88,13 @@ struct Sphere {
 	float radius;
 };
 
-HitRecord hit_sphere(const Ray &ray, const Sphere &sphere) {
-	auto L = sphere.position - ray.origin;
-	auto tca = glm::dot(L, ray.direction);
+std::optional<float> intersect_sphere(const Ray &ray, const Sphere &sphere) {
+	auto l = sphere.position - ray.origin;
+	auto tca = glm::dot(l, ray.direction);
 
 	auto radius2 = sphere.radius * sphere.radius;
-	auto d2 = glm::dot(L, L) - tca * tca;
-	if (d2 > radius2) return HitRecord{.hit = false};
+	auto d2 = glm::dot(l, l) - tca * tca;
+	if (d2 > radius2) return {};
 
 	auto thc = glm::sqrt(radius2 - d2);
 	auto t0 = tca - thc;
@@ -95,18 +104,124 @@ HitRecord hit_sphere(const Ray &ray, const Sphere &sphere) {
 
 	if (t0 < 0) {
 		t0 = t1;
-		if (t0 < 0) return HitRecord{.hit = false};
+		if (t0 < 0) return {};
 	}
 
-	auto pos = ray_at(ray, t0);
-	auto normal = glm::normalize(pos - sphere.position);
+	return t0;
+}
+
+struct Plane {
+	glm::vec3 position;
+	glm::vec3 normal;
+};
+
+std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
+	auto d = glm::dot(plane.normal, ray.direction);
+	auto p = plane.position - ray.origin;
+	auto t = glm::dot(p, plane.normal) / d;
+	if (t < 0) return {};
+	return t;
+}
+
+struct Scene {
+	std::vector<Sphere> spheres;
+	std::vector<Plane> planes;
+};
+
+std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float closest) {
+	std::optional<Sphere> sphere;
+
+	for (const auto &obj : scene.spheres) {
+		auto hit_dst = intersect_sphere(ray, obj);
+		if (hit_dst && hit_dst < closest) {
+			sphere = obj;
+			closest = hit_dst.value();
+		}
+	}
+
+	if (!sphere) return {};
+
+	auto pos = ray_at(ray, closest);
+	auto normal = glm::normalize(pos - sphere->position);
+	auto front_facing = glm::dot(ray.direction, normal) < 0;
+
+	if (!front_facing) normal = -normal;
+
 	return HitRecord{
-			.hit = true,
-			.depth = t0,
+			.distance = closest,
 			.position = pos,
 			.normal = normal,
-			.front_facing = glm::dot(ray.direction, normal) < 0,
+			.front_facing = front_facing,
 	};
+}
+
+std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float closest) {
+	std::optional<Plane> plane;
+
+	for (const auto &obj : scene.planes) {
+		auto hit_dst = intersect_plane(ray, obj);
+		if (hit_dst && hit_dst < closest) {
+			plane = obj;
+			closest = hit_dst.value();
+		}
+	}
+
+	if (!plane) return {};
+
+	auto pos = ray_at(ray, closest);
+	auto normal = plane->normal;
+	auto front_facing = glm::dot(ray.direction, normal) < 0;
+	if (!front_facing) normal = -normal;
+
+	return HitRecord{
+			.distance = closest,
+			.position = pos,
+			.normal = normal,
+			.front_facing = front_facing,
+	};
+}
+
+std::optional<HitRecord> hit_scene(const Ray &ray, const Scene &scene) {
+	auto sphere = hit_spheres(ray, scene, INFINITY);
+	auto plane = hit_planes(ray, scene, sphere ? sphere->distance : INFINITY);
+
+	if (plane) return plane;
+	if (sphere) return sphere;
+
+	return {};
+}
+
+// TODO replace
+glm::vec3 random_in_unit_sphere() {
+	while (true) {
+		auto p = glm::vec3(
+				rand_float(-1, 1),
+				rand_float(-1, 1),
+				rand_float(-1, 1));
+		if (glm::dot(p, p) >= 1) continue;
+		return p;
+	}
+}
+
+glm::vec3 ray_color(const Ray &ray, const Scene &scene, int max_depth) {
+	if (max_depth <= 0) return glm::vec3(0);
+
+	auto rec = hit_scene(ray, scene);
+	if (rec) {
+		auto target = rec->position + rec->normal + random_in_unit_sphere();
+		auto sub_ray = Ray{
+				.origin = rec->position,
+				.direction = glm::normalize(target - rec->position),
+		};
+		// TODO use cos?
+		//return 0.5f * ray_color(sub_ray, scene, max_depth - 1);
+		return 0.5f * (rec->normal + glm::vec3(1));
+	}
+
+	auto t = .5f * (ray.direction.y + 1.f);
+	auto c = (1.f - t) * glm::vec3(1.0, 1.0, 1.0) + t * glm::vec3(0.5, 0.7, 1.0);
+
+	return c;
 }
 
 #define WIDTH   (1920/2)
@@ -122,10 +237,9 @@ int main() {
 	};
 	init_camera(cam, WIDTH, HEIGHT);
 
-	auto sphere = Sphere{
-			.position = {0, 0, -3},
-			.radius = 1,
-	};
+	Scene scene;
+	scene.spheres.push_back(Sphere{.position = {0, 0, -3}, .radius = 1});
+	scene.planes.push_back(Plane{.position = {0, -1, 0}, .normal = {0, 1, 0}});
 
 	FILE *f;
 	long x, y;
@@ -133,7 +247,10 @@ int main() {
 
 	bmp_init(bmp, WIDTH, HEIGHT);
 
-	auto samples_base = 4;
+	auto samples_base = 1;
+	auto max_depth = 10;
+
+	auto start = std::chrono::high_resolution_clock::now();
 
 	for (y = 0; y < HEIGHT; y++) {
 		for (x = 0; x < WIDTH; x++) {
@@ -143,18 +260,13 @@ int main() {
 				auto u = static_cast<float>(x) / WIDTH;
 				auto v = static_cast<float>(y) / HEIGHT;
 
-				auto pixel_size = 1.f / WIDTH / samples_base;
-				u += (i % samples_base) * pixel_size;
-				v += (i / samples_base) * pixel_size;
+				auto pixel_size_x = 1.f / WIDTH / samples_base;
+				auto pixel_size_y = 1.f / HEIGHT / samples_base;
+				u += ((i % samples_base) + .5f) * pixel_size_x;
+				v += ((i / samples_base) + .5f) * pixel_size_y;
 
 				auto r = ray_from_camera(cam, u, v);
-				auto t = .5f * (r.direction.y + 1.f);
-				auto c = (1.f - t) * glm::vec3(1.0, 1.0, 1.0) + t * glm::vec3(0.5, 0.7, 1.0);
-
-				auto rec = hit_sphere(r, sphere);
-				if (rec.hit) c = 0.5f * (rec.normal + glm::vec3(1, 1, 1));
-
-				color += c;
+				color += ray_color(r, scene, max_depth);
 			}
 
 			auto c = color;
@@ -162,6 +274,10 @@ int main() {
 			bmp_set(bmp, x, HEIGHT - y - 1, bmp_encode(c.r, c.g, c.b));
 		}
 	}
+
+	auto finish = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
+	std::cout << duration << "ms" << std::endl;
 
 	f = fopen("test.bmp", "wb");
 	fwrite(bmp, sizeof(bmp), 1, f);
