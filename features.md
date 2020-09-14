@@ -1,3 +1,11 @@
+next:
+- rectangles
+- boxes
+- rotate objects
+- materials
+- phong/blinn
+
+future:
 - triangle meshes
 - reflection
 - refraction
