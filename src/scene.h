@@ -5,6 +5,7 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/matrix.hpp>
 
 #include "light.h"
 #include "material.h"
@@ -39,7 +40,8 @@ struct Scene {
 
 std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene);
 
-void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size);
+void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size,
+			  const glm::mat4 &transform = glm::mat4(1.0f));
 
 void make_rect(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &normal,
-			   const glm::vec3 &tangent, const glm::vec2 &size);
+			   const glm::vec3 &tangent, const glm::vec2 &size, const glm::mat4 &transform = glm::mat4(1.0f));

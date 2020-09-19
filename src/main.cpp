@@ -2,6 +2,7 @@
 #include <chrono>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "bmp.h"
 
@@ -58,40 +59,22 @@ int main() {
 	Scene scene;
 	scene.ambient_light = glm::vec3(.8f);
 
-	auto box_material = Material{
-			.type = MaterialType::kBlinnPhong,
-			.color = {1, 1, 0},
-			.blinnPhong = {
-					.diffuse_intensity = 1.f,
-					.specular_intensity = 1.f,
-			},
-	};
-	make_box(scene, box_material,
-			 {-2, 3, 2},
-			 {3, 6, 3}
-	);
-	make_box(scene, box_material,
-			 {2, 1.5, -2},
-			 {3, 3, 3}
-	);
-
-	auto white = make_lambert({1, 1, 1});
 	// floor
-	make_rect(scene, white,
+	make_rect(scene, make_lambert({1, 1, 1}),
 			  {0, 0, 0},
 			  {0, 1, 0},
 			  {0, 0, 1},
 			  {10, 10}
 	);
 	// back
-	make_rect(scene, white,
+	make_rect(scene, make_lambert({1, 1, 1}),
 			  {0, 5, 5},
 			  {0, 0, -1},
 			  {0, 1, 0},
 			  {10, 10}
 	);
 	// ceiling
-	make_rect(scene, white,
+	make_rect(scene, make_lambert({1, 1, 1}),
 			  {0, 10, 0},
 			  {0, -1, 0},
 			  {0, 0, 1},
@@ -110,6 +93,27 @@ int main() {
 			  {-1, 0, 0},
 			  {0, 1, 0},
 			  {10, 10}
+	);
+
+	auto box_material = Material{
+			.type = MaterialType::kBlinnPhong,
+			.color = {1, 1, 0},
+			.blinnPhong = {
+					.diffuse_intensity = 1.f,
+					.specular_intensity = 1.f,
+			},
+	};
+	// left
+	make_box(scene, box_material,
+			 {-2, 3, 2},
+			 {3, 6, 3},
+			 glm::rotate(glm::mat4(1.f), glm::radians(-25.f), {0, 1, 0})
+	);
+	// right
+	make_box(scene, box_material,
+			 {1.5, 1.5, -2},
+			 {3, 3, 3},
+			 glm::rotate(glm::mat4(1.f), glm::radians(20.f), {0, 1, 0})
 	);
 
 	char bmp[BMP_SIZE(cfg.width, cfg.height)];

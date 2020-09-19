@@ -1,7 +1,7 @@
 next:
-- boxes
-- rotate objects
-- hdr (no color clamping until encoding to image file)
+- area light
+- improve performance
+- path tracing
 
 future:
 - triangle meshes

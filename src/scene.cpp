@@ -108,7 +108,12 @@ std::optional<HitRecord> hit_scene(const Ray &ray, const Scene &scene) {
 	return {};
 }
 
-void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size) {
+inline glm::vec3 mat_mul(const glm::mat4 &m, const glm::vec3 &v) {
+	return glm::vec3(m * glm::vec4(v, 1.f));
+}
+
+void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size,
+			  const glm::mat4 &transform) {
 	auto half_size = size * .5f;
 
 	for (auto axis = 0; axis < 3; ++axis) {
@@ -121,26 +126,26 @@ void make_box(Scene &scene, const Material &material, const glm::vec3 &position,
 
 			auto bi_tangent = glm::normalize(glm::cross(normal, tangent));
 
-			scene.planes.push_back(Plane{
-					.position = position + half_size * normal,
-					.normal = normal,
-					.tangent = tangent,
-					.bi_tangent = bi_tangent,
-					.width = glm::abs(glm::dot(bi_tangent, size)),
-					.height = glm::abs(glm::dot(tangent, size)),
-			});
-			scene.plane_materials.push_back(material);
+			make_rect(scene, material,
+					  position + half_size * mat_mul(transform, normal),
+					  normal,
+					  tangent,
+					  {glm::abs(glm::dot(bi_tangent, size)), glm::abs(glm::dot(tangent, size))},
+					  transform
+			);
 		}
 	}
 }
 
 void make_rect(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &normal,
-			   const glm::vec3 &tangent, const glm::vec2 &size) {
+			   const glm::vec3 &tangent, const glm::vec2 &size, const glm::mat4 &transform) {
+	auto t_normal = glm::normalize(mat_mul(transform, normal));
+	auto t_tangent = glm::normalize(mat_mul(transform, tangent));
 	scene.planes.push_back(Plane{
 			.position = position,
-			.normal = normal,
-			.tangent = tangent,
-			.bi_tangent = glm::normalize(glm::cross(normal, tangent)),
+			.normal = t_normal,
+			.tangent = t_tangent,
+			.bi_tangent = glm::normalize(glm::cross(t_normal, t_tangent)),
 			.width = size.x,
 			.height = size.y,
 	});
