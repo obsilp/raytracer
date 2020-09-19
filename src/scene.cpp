@@ -37,20 +37,19 @@ std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
 
 
 std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float closest) {
-	std::optional<Sphere> sphere;
-
-	for (const auto &obj : scene.spheres) {
-		auto hit_dst = intersect_sphere(ray, obj);
+	int obj_idx = -1;
+	for (auto i = 0; i < scene.spheres.size(); ++i) {
+		auto hit_dst = intersect_sphere(ray, scene.spheres[i]);
 		if (hit_dst && hit_dst < closest) {
-			sphere = obj;
+			obj_idx = i;
 			closest = hit_dst.value();
 		}
 	}
 
-	if (!sphere) return {};
+	if (obj_idx == -1) return {};
 
 	auto pos = ray_at(ray, closest);
-	auto normal = glm::normalize(pos - sphere->position);
+	auto normal = glm::normalize(pos - scene.spheres[obj_idx].position);
 	auto front_facing = glm::dot(ray.direction, normal) < 0;
 
 	if (!front_facing) normal = -normal;
@@ -60,24 +59,24 @@ std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float c
 			.position = pos,
 			.normal = normal,
 			.front_facing = front_facing,
+			.material = &scene.sphere_materials[obj_idx],
 	};
 }
 
 std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float closest) {
-	std::optional<Plane> plane;
-
-	for (const auto &obj : scene.planes) {
-		auto hit_dst = intersect_plane(ray, obj);
+	int obj_idx = -1;
+	for (auto i = 0; i < scene.planes.size(); ++i) {
+		auto hit_dst = intersect_plane(ray, scene.planes[i]);
 		if (hit_dst && hit_dst < closest) {
-			plane = obj;
+			obj_idx = i;
 			closest = hit_dst.value();
 		}
 	}
 
-	if (!plane) return {};
+	if (obj_idx == -1) return {};
 
 	auto pos = ray_at(ray, closest);
-	auto normal = plane->normal;
+	auto normal = scene.planes[obj_idx].normal;
 	auto front_facing = glm::dot(ray.direction, normal) < 0;
 	if (!front_facing) normal = -normal;
 
@@ -86,6 +85,7 @@ std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float cl
 			.position = pos,
 			.normal = normal,
 			.front_facing = front_facing,
+			.material = &scene.plane_materials[obj_idx],
 	};
 }
 

@@ -3,7 +3,7 @@ next:
 - boxes
 - rotate objects
 - materials
-- phong/blinn
+- hdr (no color clamping until encoding to image file)
 
 future:
 - triangle meshes
