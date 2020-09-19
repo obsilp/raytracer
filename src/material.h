@@ -22,3 +22,15 @@ struct Material {
 		MaterialBlinnPhong blinnPhong;
 	};
 };
+
+inline Material make_lambert(const glm::vec3 &color) {
+	return Material{
+			.type = MaterialType::kBlinnPhong,
+			.color = color,
+			.blinnPhong = {
+					.diffuse_intensity = 1.f,
+					.specular_intensity = 1.f,
+					.shininess = 20.f,
+			},
+	};
+}

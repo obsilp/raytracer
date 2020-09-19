@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include <tuple>
 #include <glm/glm.hpp>
 
 #include "ray.h"
@@ -29,15 +30,16 @@ std::optional<float> intersect_sphere(const Ray &ray, const Sphere &sphere) {
 
 std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
 	auto d = glm::dot(plane.normal, ray.direction);
+	if (glm::abs(d) < EPSILON) return {};
+
 	auto p = plane.position - ray.origin;
 	auto t = glm::dot(p, plane.normal) / d;
 	if (t < 0) return {};
 
 	p = ray_at(ray, t) - plane.position;
-	auto bi_tangent = glm::normalize(glm::cross(plane.normal, plane.tangent));
 
-	if (glm::abs(glm::dot(p, plane.tangent)) > plane.height) return {};
-	if (glm::abs(glm::dot(p, bi_tangent)) > plane.width) return {};
+	if (glm::abs(glm::dot(p, plane.tangent)) > plane.height * .5f) return {};
+	if (glm::abs(glm::dot(p, plane.bi_tangent)) > plane.width * .5f) return {};
 
 	return t;
 }
@@ -104,4 +106,43 @@ std::optional<HitRecord> hit_scene(const Ray &ray, const Scene &scene) {
 	if (sphere) return sphere;
 
 	return {};
+}
+
+void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size) {
+	auto half_size = size * .5f;
+
+	for (auto axis = 0; axis < 3; ++axis) {
+		for (auto dir = -1; dir < 2; dir += 2) {
+			glm::vec3 normal = {0, 0, 0};
+			normal[axis] = dir;
+
+			glm::vec3 tangent = {0, 0, 0};
+			tangent[(axis + 1) % 3] = dir;
+
+			auto bi_tangent = glm::normalize(glm::cross(normal, tangent));
+
+			scene.planes.push_back(Plane{
+					.position = position + half_size * normal,
+					.normal = normal,
+					.tangent = tangent,
+					.bi_tangent = bi_tangent,
+					.width = glm::abs(glm::dot(bi_tangent, size)),
+					.height = glm::abs(glm::dot(tangent, size)),
+			});
+			scene.plane_materials.push_back(material);
+		}
+	}
+}
+
+void make_rect(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &normal,
+			   const glm::vec3 &tangent, const glm::vec2 &size) {
+	scene.planes.push_back(Plane{
+			.position = position,
+			.normal = normal,
+			.tangent = tangent,
+			.bi_tangent = glm::normalize(glm::cross(normal, tangent)),
+			.width = size.x,
+			.height = size.y,
+	});
+	scene.plane_materials.push_back(material);
 }

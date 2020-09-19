@@ -10,8 +10,8 @@
 #include "scene.h"
 
 struct Config {
-	int width = 1920 / 2;
-	int height = 1080 / 2;
+	int width = 540;
+	int height = 540;
 
 	int samples_base = 1;
 };
@@ -47,49 +47,70 @@ int main() {
 	auto cfg = Config{};
 
 	auto cam = Camera{
-			.position = {0, 0, 0},
-			.look_at = {0, 0, 1},
+			.position = {0, 5, -16},
+			.look_at = {0, 5, 0}, // forward: 0 0 1
 
-			.vfov = 90.0,
-			.focal_length = 1.0,
+			.vfov = 50.0,
+			.focal_length = 1.f,
 	};
 	init_camera(cam, cfg.width, cfg.height);
 
 	Scene scene;
-	scene.ambient_light = glm::vec3(.2f);
+	scene.ambient_light = glm::vec3(.8f);
 
-	scene.spheres.push_back(Sphere{.position = {0, 0, 3}, .radius = 1});
-	scene.sphere_materials.push_back(Material{
+	auto box_material = Material{
 			.type = MaterialType::kBlinnPhong,
-			.color = {1, 1, 1},
+			.color = {1, 1, 0},
 			.blinnPhong = {
 					.diffuse_intensity = 1.f,
 					.specular_intensity = 1.f,
 			},
-	});
+	};
+	make_box(scene, box_material,
+			 {-2, 3, 2},
+			 {3, 6, 3}
+	);
+	make_box(scene, box_material,
+			 {2, 1.5, -2},
+			 {3, 3, 3}
+	);
 
-	scene.planes.push_back(Plane{
-			.position = {0, -1, 3},
-			.normal = {0, 1, 0},
-			.tangent = {0, 0, 1},
-			.width = INFINITY,
-			.height = INFINITY,
-	});
-	scene.plane_materials.push_back(Material{
-			.type = MaterialType::kBlinnPhong,
-			.color = {1, 0, 0},
-			.blinnPhong = {
-					.diffuse_intensity = 1.f,
-					.specular_intensity = 1.f,
-					.shininess = 20.f,
-			},
-	});
-
-	scene.directional_lights.push_back(DirectionalLight{
-			.direction = glm::normalize(glm::vec3(1, -1, 0)),
-			.color = {1, 1, 1},
-			.intensity = 1.f,
-	});
+	auto white = make_lambert({1, 1, 1});
+	// floor
+	make_rect(scene, white,
+			  {0, 0, 0},
+			  {0, 1, 0},
+			  {0, 0, 1},
+			  {10, 10}
+	);
+	// back
+	make_rect(scene, white,
+			  {0, 5, 5},
+			  {0, 0, -1},
+			  {0, 1, 0},
+			  {10, 10}
+	);
+	// ceiling
+	make_rect(scene, white,
+			  {0, 10, 0},
+			  {0, -1, 0},
+			  {0, 0, 1},
+			  {10, 10}
+	);
+	// left
+	make_rect(scene, make_lambert({1, 0, 0}),
+			  {-5, 5, 0},
+			  {1, 0, 0},
+			  {0, 1, 0},
+			  {10, 10}
+	);
+	// right
+	make_rect(scene, make_lambert({0, 1, 0}),
+			  {5, 5, 0},
+			  {-1, 0, 0},
+			  {0, 1, 0},
+			  {10, 10}
+	);
 
 	char bmp[BMP_SIZE(cfg.width, cfg.height)];
 	bmp_init(bmp, cfg.width, cfg.height);
