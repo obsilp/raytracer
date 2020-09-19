@@ -13,12 +13,12 @@ inline Ray secondary_ray(const glm::vec3 &origin, const glm::vec3 &direction) {
 glm::vec3 blinn_phong(const HitRecord &hit, const Camera &camera, const glm::vec3 &to_light) {
 	auto mat = hit.material->blinnPhong;
 
-	auto diffuse = glm::dot(hit.normal, to_light);
-	diffuse = glm::clamp(diffuse, 0.f, 1.f);
+	auto dot_normal = glm::dot(hit.normal, to_light);
+	auto diffuse = glm::clamp(dot_normal, 0.f, 1.f);
 	diffuse *= mat.diffuse_intensity;
 
 	auto specular = .0f;
-	if (mat.shininess > 0.f) {
+	if (mat.shininess > 0.f && dot_normal > 0.001f) {
 		auto to_cam = glm::normalize(camera.position - hit.position);
 		auto half_way = glm::normalize(to_light + to_cam);
 		specular = glm::max(glm::dot(hit.normal, half_way), 0.f);
