@@ -1,5 +1,4 @@
 next:
-- area light
 - improve performance
 - path tracing
 

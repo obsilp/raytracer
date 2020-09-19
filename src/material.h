@@ -3,7 +3,7 @@
 #include <glm/vec3.hpp>
 
 enum class MaterialType {
-	kAmbient = 0,
+	kInvisible = 0,
 	kBlinnPhong,
 };
 
@@ -23,14 +23,20 @@ struct Material {
 	};
 };
 
-inline Material make_lambert(const glm::vec3 &color) {
+static inline Material make_mat_invisible() {
+	return Material{
+			.type = MaterialType::kInvisible,
+	};
+}
+
+static inline Material make_mat_lambert(const glm::vec3 &color) {
 	return Material{
 			.type = MaterialType::kBlinnPhong,
 			.color = color,
 			.blinnPhong = {
 					.diffuse_intensity = 1.f,
-					.specular_intensity = 1.f,
-					.shininess = 20.f,
+					.specular_intensity = 0.f,
+					.shininess = 0.f,
 			},
 	};
 }

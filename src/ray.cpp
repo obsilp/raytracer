@@ -29,6 +29,17 @@ glm::vec3 blinn_phong(const HitRecord &hit, const Camera &camera, const glm::vec
 	return (diffuse + specular) * hit.material->color;
 }
 
+glm::vec3 calc_surface_color(const HitRecord &hit, const Camera &camera, const glm::vec3 &to_light) {
+	switch (hit.material->type) {
+	default:
+	case MaterialType::kInvisible:
+		return {0, 0, 0};
+
+	case MaterialType::kBlinnPhong:
+		return blinn_phong(hit, camera, to_light);
+	}
+}
+
 glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene) {
 	auto hit = hit_scene(ray, scene);
 	if (!hit || !hit->front_facing) return glm::vec3(0);
@@ -40,18 +51,46 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene) {
 		auto light_hit = hit_scene(light_ray, scene);
 		if (light_hit) continue;
 
-		glm::vec3 material_color(0);
+		auto surface_color = calc_surface_color(hit.value(), camera, -l.direction);
+		color += l.intensity * l.color * surface_color;
+	}
 
-		switch (hit->material->type) {
-		case MaterialType::kAmbient:
-			break;
+	for (auto i = 0; i < scene.area_lights.size(); ++i) {
+		const auto &plane = scene.area_lights[i];
+		const auto &data = scene.area_light_data[i];
+		const auto mro = data.max_random_offset;
 
-		case MaterialType::kBlinnPhong:
-			material_color = blinn_phong(hit.value(), camera, -l.direction);
-			break;
+		auto u_size = plane.width / static_cast<float>(data.u_samples);
+		auto v_size = plane.height / static_cast<float>(data.v_samples);
+		auto corner = plane.position - plane.bi_tangent * (plane.width * .5f) - plane.tangent * (plane.height * .5f);
+
+		glm::vec3 area_color = {0, 0, 0};
+
+		for (auto u = 0; u < data.u_samples; ++u) {
+			for (auto v = 0; v < data.v_samples; ++v) {
+				glm::vec2 offset = {
+						(u + .5f + rand_float(-mro, mro)) * u_size,
+						(v + .5f + rand_float(-mro, mro)) * v_size,
+				};
+				auto pos = corner + plane.bi_tangent * offset.x + plane.tangent * offset.y;
+				auto dir = glm::normalize(pos - hit->position);
+
+				// ignore every object above the light
+				if (glm::dot(dir, plane.normal) > 0) continue;
+
+				auto light_ray = secondary_ray(hit->position, dir);
+				auto light_hit = hit_scene(light_ray, scene);
+
+				// only calculate light if ray intersects with the area light first
+				if (light_hit && light_hit->entity_id != plane.id) continue;
+
+				area_color += calc_surface_color(hit.value(), camera, dir);
+			}
 		}
 
-		color += l.intensity * l.color * material_color;
+		area_color *= data.color * data.intensity;
+		area_color /= static_cast<float>(data.u_samples * data.v_samples);
+		color += area_color;
 	}
 
 	return color;

@@ -11,12 +11,19 @@
 #include "material.h"
 #include "math.h"
 
+using EntityId = unsigned short;
+static const EntityId NULL_ENTITY = 0;
+
 struct Sphere {
+	EntityId id;
+
 	glm::vec3 position;
 	float radius;
 };
 
 struct Plane {
+	EntityId id;
+
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec3 tangent;
@@ -27,6 +34,8 @@ struct Plane {
 };
 
 struct Scene {
+	EntityId next_entity_id = 1;
+
 	glm::vec3 ambient_light;
 
 	std::vector<Sphere> spheres;
@@ -36,12 +45,40 @@ struct Scene {
 	std::vector<Material> plane_materials;
 
 	std::vector<DirectionalLight> directional_lights;
+
+	std::vector<Plane> area_lights;
+	std::vector<AreaLight> area_light_data;
 };
+
+static EntityId add_sphere(Scene &scene, Sphere obj, const Material &material) {
+	obj.id = scene.next_entity_id++;
+	scene.spheres.emplace_back(obj);
+	scene.sphere_materials.push_back(material);
+	return obj.id;
+}
+
+static EntityId add_plane(Scene &scene, const Material &material, Plane obj) {
+	obj.id = scene.next_entity_id++;
+	scene.planes.emplace_back(obj);
+	scene.plane_materials.push_back(material);
+	return obj.id;
+}
+
+static void add_planes(Scene &scene, const Material &material, std::vector<Plane> objects) {
+	for (auto obj : objects)
+		add_plane(scene, material, obj);
+}
+
+static void add_area_light(Scene &scene, const AreaLight &light, Plane obj) {
+	obj.id = add_plane(scene, make_mat_invisible(), obj);
+	scene.area_lights.emplace_back(obj);
+	scene.area_light_data.push_back(light);
+}
 
 std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene);
 
-void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size,
-			  const glm::mat4 &transform = glm::mat4(1.0f));
+std::vector<Plane> make_box(const glm::vec3 &position, const glm::vec3 &size,
+							const glm::mat4 &transform = glm::mat4(1.0f));
 
-void make_rect(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &normal,
-			   const glm::vec3 &tangent, const glm::vec2 &size, const glm::mat4 &transform = glm::mat4(1.0f));
+Plane make_rect(const glm::vec3 &position, const glm::vec3 &normal, const glm::vec3 &tangent, const glm::vec2 &size,
+				const glm::mat4 &transform = glm::mat4(1.0f));

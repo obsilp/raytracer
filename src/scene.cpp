@@ -64,6 +64,7 @@ std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float c
 	if (!front_facing) normal = -normal;
 
 	return HitRecord{
+			.entity_id = scene.planes[obj_idx].id,
 			.distance = closest,
 			.position = pos,
 			.normal = normal,
@@ -90,6 +91,7 @@ std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float cl
 	if (!front_facing) normal = -normal;
 
 	return HitRecord{
+			.entity_id = scene.planes[obj_idx].id,
 			.distance = closest,
 			.position = pos,
 			.normal = normal,
@@ -112,8 +114,9 @@ inline glm::vec3 mat_mul(const glm::mat4 &m, const glm::vec3 &v) {
 	return glm::vec3(m * glm::vec4(v, 1.f));
 }
 
-void make_box(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &size,
-			  const glm::mat4 &transform) {
+std::vector<Plane> make_box(const glm::vec3 &position, const glm::vec3 &size, const glm::mat4 &transform) {
+	std::vector<Plane> planes;
+
 	auto half_size = size * .5f;
 
 	for (auto axis = 0; axis < 3; ++axis) {
@@ -125,29 +128,29 @@ void make_box(Scene &scene, const Material &material, const glm::vec3 &position,
 			tangent[(axis + 1) % 3] = dir;
 
 			auto bi_tangent = glm::normalize(glm::cross(normal, tangent));
-
-			make_rect(scene, material,
-					  position + half_size * mat_mul(transform, normal),
-					  normal,
-					  tangent,
-					  {glm::abs(glm::dot(bi_tangent, size)), glm::abs(glm::dot(tangent, size))},
-					  transform
+			auto plane = make_rect(position + half_size * mat_mul(transform, normal),
+								   normal,
+								   tangent,
+								   {glm::abs(glm::dot(bi_tangent, size)), glm::abs(glm::dot(tangent, size))},
+								   transform
 			);
+			planes.emplace_back(plane);
 		}
 	}
+
+	return planes;
 }
 
-void make_rect(Scene &scene, const Material &material, const glm::vec3 &position, const glm::vec3 &normal,
-			   const glm::vec3 &tangent, const glm::vec2 &size, const glm::mat4 &transform) {
+Plane make_rect(const glm::vec3 &position, const glm::vec3 &normal, const glm::vec3 &tangent, const glm::vec2 &size,
+				const glm::mat4 &transform) {
 	auto t_normal = glm::normalize(mat_mul(transform, normal));
 	auto t_tangent = glm::normalize(mat_mul(transform, tangent));
-	scene.planes.push_back(Plane{
+	return Plane{
 			.position = position,
 			.normal = t_normal,
 			.tangent = t_tangent,
 			.bi_tangent = glm::normalize(glm::cross(t_normal, t_tangent)),
 			.width = size.x,
 			.height = size.y,
-	});
-	scene.plane_materials.push_back(material);
+	};
 }

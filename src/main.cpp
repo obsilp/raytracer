@@ -57,64 +57,79 @@ int main() {
 	init_camera(cam, cfg.width, cfg.height);
 
 	Scene scene;
-	scene.ambient_light = glm::vec3(.8f);
+	scene.ambient_light = {0, 0, 0};
 
 	// floor
-	make_rect(scene, make_lambert({1, 1, 1}),
-			  {0, 0, 0},
-			  {0, 1, 0},
-			  {0, 0, 1},
-			  {10, 10}
-	);
+	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
+			{0, 0, 0},
+			{0, 1, 0},
+			{0, 0, 1},
+			{10, 10}
+	));
 	// back
-	make_rect(scene, make_lambert({1, 1, 1}),
-			  {0, 5, 5},
-			  {0, 0, -1},
-			  {0, 1, 0},
-			  {10, 10}
-	);
+	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
+			{0, 5, 5},
+			{0, 0, -1},
+			{0, 1, 0},
+			{10, 10}
+	));
 	// ceiling
-	make_rect(scene, make_lambert({1, 1, 1}),
-			  {0, 10, 0},
-			  {0, -1, 0},
-			  {0, 0, 1},
-			  {10, 10}
-	);
+	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
+			{0, 10, 0},
+			{0, -1, 0},
+			{0, 0, 1},
+			{10, 10}
+	));
 	// left
-	make_rect(scene, make_lambert({1, 0, 0}),
-			  {-5, 5, 0},
-			  {1, 0, 0},
-			  {0, 1, 0},
-			  {10, 10}
-	);
+	add_plane(scene, make_mat_lambert({1, 0, 0}), make_rect(
+			{-5, 5, 0},
+			{1, 0, 0},
+			{0, 1, 0},
+			{10, 10}
+	));
 	// right
-	make_rect(scene, make_lambert({0, 1, 0}),
-			  {5, 5, 0},
-			  {-1, 0, 0},
-			  {0, 1, 0},
-			  {10, 10}
-	);
+	add_plane(scene, make_mat_lambert({0, 1, 0}), make_rect(
+			{5, 5, 0},
+			{-1, 0, 0},
+			{0, 1, 0},
+			{10, 10}
+	));
 
 	auto box_material = Material{
 			.type = MaterialType::kBlinnPhong,
-			.color = {1, 1, 0},
+			.color = {1, 1, 1},
 			.blinnPhong = {
 					.diffuse_intensity = 1.f,
 					.specular_intensity = 1.f,
 			},
 	};
 	// left
-	make_box(scene, box_material,
-			 {-2, 3, 2},
-			 {3, 6, 3},
-			 glm::rotate(glm::mat4(1.f), glm::radians(-25.f), {0, 1, 0})
-	);
+	add_planes(scene, box_material, make_box(
+			{-2, 3, 2},
+			{3, 6, 3},
+			glm::rotate(glm::mat4(1.f), glm::radians(-25.f), {0, 1, 0})
+	));
 	// right
-	make_box(scene, box_material,
-			 {1.5, 1.5, -2},
-			 {3, 3, 3},
-			 glm::rotate(glm::mat4(1.f), glm::radians(20.f), {0, 1, 0})
-	);
+	add_planes(scene, box_material, make_box(
+			{1.5, 1.5, -2},
+			{3, 3, 3},
+			glm::rotate(glm::mat4(1.f), glm::radians(20.f), {0, 1, 0})
+	));
+
+	// light
+	auto area_light = AreaLight{
+			.color = {1, 1, 1},
+			.intensity = 1.f,
+			.u_samples = 1,
+			.v_samples = 1,
+			.max_random_offset = .0f,
+	};
+	add_area_light(scene, area_light, make_rect(
+			{0, 9, 0},
+			{0, -1, 0},
+			{0, 0, 1},
+			{1, 1}
+	));
 
 	char bmp[BMP_SIZE(cfg.width, cfg.height)];
 	bmp_init(bmp, cfg.width, cfg.height);
