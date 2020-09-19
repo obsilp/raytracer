@@ -32,6 +32,13 @@ std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
 	auto p = plane.position - ray.origin;
 	auto t = glm::dot(p, plane.normal) / d;
 	if (t < 0) return {};
+
+	p = ray_at(ray, t) - plane.position;
+	auto bi_tangent = glm::normalize(glm::cross(plane.normal, plane.tangent));
+
+	if (glm::abs(glm::dot(p, plane.tangent)) > plane.height) return {};
+	if (glm::abs(glm::dot(p, bi_tangent)) > plane.width) return {};
+
 	return t;
 }
 

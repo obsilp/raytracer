@@ -56,19 +56,25 @@ int main() {
 	init_camera(cam, cfg.width, cfg.height);
 
 	Scene scene;
-	scene.ambient_light = glm::vec3(.04f);
+	scene.ambient_light = glm::vec3(.2f);
 
-	scene.spheres.push_back(Sphere{.position = {0, 0, 3}, .radius = 1});
-	scene.sphere_materials.push_back(Material{
-			.type = MaterialType::kBlinnPhong,
-			.color = {1, 1, 1},
-			.blinnPhong = {
-					.diffuse_intensity = 1.f,
-					.specular_intensity = 1.f,
-			},
+//	scene.spheres.push_back(Sphere{.position = {0, 0, 3}, .radius = 1});
+//	scene.sphere_materials.push_back(Material{
+//			.type = MaterialType::kBlinnPhong,
+//			.color = {1, 1, 1},
+//			.blinnPhong = {
+//					.diffuse_intensity = 1.f,
+//					.specular_intensity = 1.f,
+//			},
+//	});
+
+	scene.planes.push_back(Plane{
+			.position = {0, 0, 6},
+			.normal = {0, 0, -1},
+			.tangent = {0,1, 0},
+			.width = INFINITY,
+			.height = INFINITY,
 	});
-
-	scene.planes.push_back(Plane{.position = {0, -1, 0}, .normal = {0, 1, 0}});
 	scene.plane_materials.push_back(Material{
 			.type = MaterialType::kBlinnPhong,
 			.color = {1, 0, 0},
@@ -82,11 +88,6 @@ int main() {
 	scene.directional_lights.push_back(DirectionalLight{
 			.direction = glm::normalize(glm::vec3(1, -1, 0)),
 			.color = {1, 1, 1},
-			.intensity = 1.f,
-	});
-	scene.directional_lights.push_back(DirectionalLight{
-			.direction = glm::normalize(glm::vec3(-1, -1, -1)),
-			.color = {1, 0, 1},
 			.intensity = 1.f,
 	});
 

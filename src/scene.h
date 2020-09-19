@@ -7,6 +7,7 @@
 
 #include "light.h"
 #include "material.h"
+#include "math.h"
 
 struct Sphere {
 	glm::vec3 position;
@@ -16,6 +17,10 @@ struct Sphere {
 struct Plane {
 	glm::vec3 position;
 	glm::vec3 normal;
+	glm::vec3 tangent;
+
+	float width = INFINITY;
+	float height = INFINITY;
 };
 
 struct Scene {

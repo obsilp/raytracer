@@ -1,8 +1,6 @@
 next:
-- rectangles
 - boxes
 - rotate objects
-- materials
 - hdr (no color clamping until encoding to image file)
 
 future:
