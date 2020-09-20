@@ -28,23 +28,6 @@ std::optional<float> intersect_sphere(const Ray &ray, const Sphere &sphere) {
 	return t0;
 }
 
-std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
-	auto d = glm::dot(plane.normal, ray.direction);
-	if (glm::abs(d) < EPSILON) return {};
-
-	auto p = plane.position - ray.origin;
-	auto t = glm::dot(p, plane.normal) / d;
-	if (t < 0) return {};
-
-	p = ray_at(ray, t) - plane.position;
-
-	if (glm::abs(glm::dot(p, plane.tangent)) > plane.height * .5f) return {};
-	if (glm::abs(glm::dot(p, plane.bi_tangent)) > plane.width * .5f) return {};
-
-	return t;
-}
-
-
 std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float closest) {
 	int obj_idx = -1;
 	for (auto i = 0; i < scene.spheres.size(); ++i) {
@@ -71,6 +54,22 @@ std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float c
 			.front_facing = front_facing,
 			.material = &scene.sphere_materials[obj_idx],
 	};
+}
+
+std::optional<float> intersect_plane(const Ray &ray, const Plane &plane) {
+	auto d = glm::dot(plane.normal, ray.direction);
+	if (glm::abs(d) < EPSILON) return {};
+
+	auto p = plane.position - ray.origin;
+	auto t = glm::dot(p, plane.normal) / d;
+	if (t < 0) return {};
+
+	p = ray_at(ray, t) - plane.position;
+
+	if (glm::abs(glm::dot(p, plane.tangent)) > plane.height * .5f) return {};
+	if (glm::abs(glm::dot(p, plane.bi_tangent)) > plane.width * .5f) return {};
+
+	return t;
 }
 
 std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float closest) {

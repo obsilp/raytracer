@@ -1,5 +1,4 @@
 next:
-- improve performance
 - path tracing
 
 future:

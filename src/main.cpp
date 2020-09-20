@@ -1,47 +1,103 @@
-#include <iostream>
 #include <chrono>
+#include <iostream>
+#include <thread>
+#include <queue>
+#include <mutex>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-#include "bmp.h"
 
 #include "camera.h"
 #include "ray.h"
 #include "scene.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
+#include "stb_image_write.h"
+
 struct Config {
 	int width = 540;
 	int height = 540;
 
-	int samples_base = 1;
+	int samples_base = 4;
 };
 
-void generate_image(const Config &cfg, const Camera &cam, const Scene &scene, char *img_out) {
-	auto pixel_size_x = 1.f / cfg.width / cfg.samples_base;
-	auto pixel_size_y = 1.f / cfg.height / cfg.samples_base;
-	auto samples2 = static_cast<float>(cfg.samples_base * cfg.samples_base);
+struct RenderingTask {
+	const Config &cfg;
+	const Camera &cam;
+	const Scene &scene;
 
-	for (auto y = 0; y < cfg.height; y++) {
-		for (auto x = 0; x < cfg.width; x++) {
-			auto color = glm::vec3();
+	char *pixel_buffer;
 
-			for (auto i = 0; i < samples2; ++i) {
-				auto u = static_cast<float>(x) / cfg.width;
-				auto v = static_cast<float>(y) / cfg.height;
+	std::mutex queue_mutex;
+	std::queue<glm::ivec4> rectangles;
+};
 
-				u += ((i % cfg.samples_base) + .5f) * pixel_size_x;
-				v += ((i / cfg.samples_base) + .5f) * pixel_size_y;
+void generate_image_part(RenderingTask &task) {
+	auto pixel_size_x = 1.f / task.cfg.width / task.cfg.samples_base;
+	auto pixel_size_y = 1.f / task.cfg.height / task.cfg.samples_base;
+	auto samples2 = static_cast<float>(task.cfg.samples_base * task.cfg.samples_base);
 
-				auto r = ray_from_camera(cam, u, v);
-				color += ray_color(r, cam, scene);
+	while (true) {
+		glm::ivec4 rect;
+
+		{
+			const std::lock_guard guard(task.queue_mutex);
+			if (task.rectangles.empty()) break;
+			rect = task.rectangles.front();
+			task.rectangles.pop();
+		}
+
+		for (auto y = rect.y; y < rect.w; y++) {
+			for (auto x = rect.x; x < rect.z; x++) {
+				auto color = glm::vec3();
+
+				for (auto i = 0; i < samples2; ++i) {
+					auto u = static_cast<float>(x) / task.cfg.width;
+					auto v = static_cast<float>(y) / task.cfg.height;
+
+					u += ((i % task.cfg.samples_base) + .5f) * pixel_size_x;
+					v += ((i / task.cfg.samples_base) + .5f) * pixel_size_y;
+
+					auto r = ray_from_camera(task.cam, u, v);
+					color += ray_color(r, task.cam, task.scene);
+				}
+
+				color /= samples2;
+				color = glm::clamp(color, 0.f, 1.f);
+
+				auto p = task.pixel_buffer + ((task.cfg.height - y - 1) * task.cfg.width + x) * 3;
+				p[0] = static_cast<char>(255.99f * color.r);
+				p[1] = static_cast<char>(255.99f * color.g);
+				p[2] = static_cast<char>(255.99f * color.b);
 			}
-
-			color /= samples2;
-			color = glm::clamp(color, 0.f, 1.f);
-			bmp_set(img_out, x, cfg.height - y - 1, bmp_encode(color.r, color.g, color.b));
 		}
 	}
+}
+
+void generate_image(RenderingTask &task) {
+	const auto cores = std::thread::hardware_concurrency();
+	std::cout << "core num: " << cores << std::endl;
+
+	float rect_width = 100;
+	float rect_height = 100;
+	for (float x = 0; x < static_cast<float>(task.cfg.width) / rect_width; ++x) {
+		for (float y = 0; y < static_cast<float>(task.cfg.height) / rect_height; ++y) {
+			glm::ivec4 rect(x * rect_width, y * rect_height, 0, 0);
+			rect.z = glm::min(static_cast<float>(task.cfg.width), rect.x + rect_width);
+			rect.w = glm::min(static_cast<float>(task.cfg.height), rect.y + rect_height);
+			task.rectangles.push(rect);
+		}
+	}
+
+	std::vector<std::thread> threads;
+
+	for (auto i = 0; i < cores; ++i) {
+		std::thread t([&task]() { generate_image_part(task); });
+		threads.emplace_back(std::move(t));
+	}
+
+	for (auto &t : threads) t.join();
 }
 
 int main() {
@@ -120,9 +176,9 @@ int main() {
 	auto area_light = AreaLight{
 			.color = {1, 1, 1},
 			.intensity = 1.f,
-			.u_samples = 1,
-			.v_samples = 1,
-			.max_random_offset = .0f,
+			.u_samples = 8,
+			.v_samples = 8,
+			.max_random_offset = .3f,
 	};
 	add_area_light(scene, area_light, make_rect(
 			{0, 9, 0},
@@ -131,20 +187,26 @@ int main() {
 			{1, 1}
 	));
 
-	char bmp[BMP_SIZE(cfg.width, cfg.height)];
-	bmp_init(bmp, cfg.width, cfg.height);
+	auto bmp_size = cfg.width * cfg.height * 3;
+	auto pixel_buffer = new char[bmp_size];
+	memset(pixel_buffer, 0, bmp_size);
+
+	RenderingTask task{
+			.cfg = cfg,
+			.cam = cam,
+			.scene = scene,
+
+			.pixel_buffer = pixel_buffer,
+	};
 
 	auto start = std::chrono::high_resolution_clock::now();
-
-	generate_image(cfg, cam, scene, bmp);
-
+	generate_image(task);
 	auto finish = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
-	std::cout << duration << "ms" << std::endl;
+	std::cout << duration << "ms - " << (duration / 1000.f / 60.f) << "m" << std::endl;
 
-	auto f = fopen("test.bmp", "wb");
-	fwrite(bmp, sizeof(bmp), 1, f);
-	fclose(f);
+	stbi_write_bmp("test.bmp", cfg.width, cfg.height, 3, pixel_buffer);
+	delete[] pixel_buffer;
 
 	return 0;
 }
