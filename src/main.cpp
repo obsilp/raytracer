@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -27,6 +28,7 @@ struct RenderingTask {
 	const Camera &cam;
 	const Scene &scene;
 
+	Stats stats;
 	char *pixel_buffer;
 
 	std::mutex queue_mutex;
@@ -60,7 +62,7 @@ void generate_image_part(RenderingTask &task) {
 					v += ((i / task.cfg.samples_base) + .5f) * pixel_size_y;
 
 					auto r = ray_from_camera(task.cam, u, v);
-					color += ray_color(r, task.cam, task.scene);
+					color += ray_color(r, task.cam, task.scene, task.stats);
 				}
 
 				color /= samples2;
@@ -204,6 +206,7 @@ int main() {
 	auto finish = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
 	std::cout << duration << "ms - " << (duration / 1000.f / 60.f) << "m" << std::endl;
+	std::cout << "rays: " << task.stats.ray_count << std::endl;
 
 	stbi_write_bmp("test.bmp", cfg.width, cfg.height, 3, pixel_buffer);
 	delete[] pixel_buffer;

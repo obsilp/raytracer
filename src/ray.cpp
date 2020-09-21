@@ -40,15 +40,15 @@ glm::vec3 calc_surface_color(const HitRecord &hit, const Camera &camera, const g
 	}
 }
 
-glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene) {
-	auto hit = hit_scene(ray, scene);
+glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, Stats &stats) {
+	auto hit = hit_scene(ray, scene, stats);
 	if (!hit || !hit->front_facing) return glm::vec3(0);
 
 	auto color = scene.ambient_light * hit->material->color;
 
 	for (const auto &l : scene.directional_lights) {
 		auto light_ray = secondary_ray(hit->position, -l.direction);
-		auto light_hit = hit_scene(light_ray, scene);
+		auto light_hit = hit_scene(light_ray, scene, stats);
 		if (light_hit) continue;
 
 		auto surface_color = calc_surface_color(hit.value(), camera, -l.direction);
@@ -79,7 +79,7 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene) {
 				if (glm::dot(dir, plane.normal) > 0) continue;
 
 				auto light_ray = secondary_ray(hit->position, dir);
-				auto light_hit = hit_scene(light_ray, scene);
+				auto light_hit = hit_scene(light_ray, scene, stats);
 
 				// only calculate light if ray intersects with the area light first
 				if (light_hit && light_hit->entity_id != plane.id) continue;

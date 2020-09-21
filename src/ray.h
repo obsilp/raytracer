@@ -14,7 +14,7 @@ inline glm::vec3 ray_at(const Ray &ray, float t) {
 	return ray.origin + ray.direction * t;
 }
 
-glm::vec3 ray_color(const Ray &ray, const struct Camera &camera, const struct Scene &scene);
+glm::vec3 ray_color(const Ray &ray, const struct Camera &camera, const Scene &scene, Stats &stats);
 
 struct HitRecord {
 	EntityId entity_id;

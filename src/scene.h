@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <atomic>
 #include <optional>
 #include <vector>
 
@@ -50,6 +52,12 @@ struct Scene {
 	std::vector<AreaLight> area_light_data;
 };
 
+struct Stats {
+	std::atomic<unsigned int> ray_count = 0;
+};
+
+std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene, Stats &stats);
+
 static EntityId add_sphere(Scene &scene, Sphere obj, const Material &material) {
 	obj.id = scene.next_entity_id++;
 	scene.spheres.emplace_back(obj);
@@ -74,8 +82,6 @@ static void add_area_light(Scene &scene, const AreaLight &light, Plane obj) {
 	scene.area_lights.emplace_back(obj);
 	scene.area_light_data.push_back(light);
 }
-
-std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene);
 
 std::vector<Plane> make_box(const glm::vec3 &position, const glm::vec3 &size,
 							const glm::mat4 &transform = glm::mat4(1.0f));

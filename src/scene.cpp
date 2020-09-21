@@ -99,7 +99,9 @@ std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float cl
 	};
 }
 
-std::optional<HitRecord> hit_scene(const Ray &ray, const Scene &scene) {
+std::optional<HitRecord> hit_scene(const Ray &ray, const Scene &scene, Stats &stats) {
+	++stats.ray_count;
+
 	auto sphere = hit_spheres(ray, scene, INFINITY);
 	auto plane = hit_planes(ray, scene, sphere ? sphere->distance : INFINITY);
 
