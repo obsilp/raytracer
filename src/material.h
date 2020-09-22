@@ -3,7 +3,7 @@
 #include <glm/vec3.hpp>
 
 enum class MaterialType {
-	kInvisible = 0,
+	kUnlit = 0,
 	kBlinnPhong,
 };
 
@@ -23,9 +23,10 @@ struct Material {
 	};
 };
 
-static inline Material make_mat_invisible() {
+static inline Material make_mat_unlit(const glm::vec3 &color) {
 	return Material{
-			.type = MaterialType::kInvisible,
+			.type = MaterialType::kUnlit,
+			.color = color,
 	};
 }
 

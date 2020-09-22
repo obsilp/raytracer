@@ -32,7 +32,6 @@ glm::vec3 blinn_phong(const HitRecord &hit, const Camera &camera, const glm::vec
 glm::vec3 calc_surface_color(const HitRecord &hit, const Camera &camera, const glm::vec3 &to_light) {
 	switch (hit.material->type) {
 	default:
-	case MaterialType::kInvisible:
 		return {0, 0, 0};
 
 	case MaterialType::kBlinnPhong:
@@ -46,6 +45,9 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, St
 
 	auto hit = hit_scene(ray, scene, stats);
 	if (!hit || !hit->front_facing) return glm::vec3(0);
+
+	if (hit->material->type == MaterialType::kUnlit)
+		return hit->material->color;
 
 	glm::vec3 direct_color(0.f);
 	glm::vec3 indirect_color(0.f);

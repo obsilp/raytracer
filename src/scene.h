@@ -78,7 +78,7 @@ static void add_planes(Scene &scene, const Material &material, std::vector<Plane
 }
 
 static void add_area_light(Scene &scene, const AreaLight &light, Plane obj) {
-	obj.id = add_plane(scene, make_mat_invisible(), obj);
+	obj.id = add_plane(scene, make_mat_unlit({1, 1, 1}), obj);
 	scene.area_lights.emplace_back(obj);
 	scene.area_light_data.push_back(light);
 }
