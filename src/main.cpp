@@ -20,7 +20,8 @@ struct Config {
 	int width = 540;
 	int height = 540;
 
-	int samples_base = 4;
+	int samples_base = 5;
+	int max_depth = 5;
 };
 
 struct RenderingTask {
@@ -62,7 +63,7 @@ void generate_image_part(RenderingTask &task) {
 					v += ((i / task.cfg.samples_base) + .5f) * pixel_size_y;
 
 					auto r = ray_from_camera(task.cam, u, v);
-					color += ray_color(r, task.cam, task.scene, task.stats);
+					color += ray_color(r, task.cam, task.scene, task.stats, task.cfg.max_depth);
 				}
 
 				color /= samples2;
@@ -178,12 +179,12 @@ int main() {
 	auto area_light = AreaLight{
 			.color = {1, 1, 1},
 			.intensity = 1.f,
-			.u_samples = 8,
-			.v_samples = 8,
+			.u_samples = 3,
+			.v_samples = 3,
 			.max_random_offset = .3f,
 	};
 	add_area_light(scene, area_light, make_rect(
-			{0, 9, 0},
+			{0, 9.9999f, 0},
 			{0, -1, 0},
 			{0, 0, 1},
 			{1, 1}

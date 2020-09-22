@@ -40,21 +40,27 @@ glm::vec3 calc_surface_color(const HitRecord &hit, const Camera &camera, const g
 	}
 }
 
-glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, Stats &stats) {
+glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, Stats &stats, int max_depth) {
+	if (max_depth <= 0)
+		return glm::vec3(0);
+
 	auto hit = hit_scene(ray, scene, stats);
 	if (!hit || !hit->front_facing) return glm::vec3(0);
 
-	auto color = scene.ambient_light * hit->material->color;
+	glm::vec3 direct_color(0.f);
+	glm::vec3 indirect_color(0.f);
 
+	// directional lights
 	for (const auto &l : scene.directional_lights) {
 		auto light_ray = secondary_ray(hit->position, -l.direction);
 		auto light_hit = hit_scene(light_ray, scene, stats);
 		if (light_hit) continue;
 
 		auto surface_color = calc_surface_color(hit.value(), camera, -l.direction);
-		color += l.intensity * l.color * surface_color;
+		direct_color += l.intensity * l.color * surface_color;
 	}
 
+	// area lights
 	for (auto i = 0; i < scene.area_lights.size(); ++i) {
 		const auto &plane = scene.area_lights[i];
 		const auto &data = scene.area_light_data[i];
@@ -90,8 +96,23 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, St
 
 		area_color *= data.color * data.intensity;
 		area_color /= static_cast<float>(data.u_samples * data.v_samples);
-		color += area_color;
+		direct_color += area_color;
 	}
 
-	return color;
+	// indirect diffuse lighting
+	if (max_depth > 1) {
+		auto dir = uniform_sample_hemisphere(rand_float(), rand_float());
+		auto tangent = create_tangent(hit->normal);
+		dir = align_nbt(dir, hit->normal, tangent);
+		dir = glm::normalize(dir);
+
+		auto indirect_ray = secondary_ray(hit->position, dir);
+		auto indirect = ray_color(indirect_ray, camera, scene, stats, max_depth - 1);
+		auto cos0 = glm::max(0.f, glm::dot(hit->normal, dir));
+
+		static const float p = 1.f / (2.f * PI);
+		indirect_color += (hit->material->color / PI) * indirect * cos0 / p;
+	}
+
+	return glm::clamp(direct_color + indirect_color, 0.f, 1.f);
 }
