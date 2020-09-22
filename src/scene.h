@@ -38,8 +38,6 @@ struct Plane {
 struct Scene {
 	EntityId next_entity_id = 1;
 
-	glm::vec3 ambient_light;
-
 	std::vector<Sphere> spheres;
 	std::vector<Material> sphere_materials;
 
@@ -56,7 +54,8 @@ struct Stats {
 	std::atomic<unsigned int> ray_count = 0;
 };
 
-std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene, Stats &stats);
+std::optional<struct HitRecord> hit_scene(const struct Ray &ray, const Scene &scene, Stats &stats,
+										  float max_length = INFINITY);
 
 static EntityId add_sphere(Scene &scene, Sphere obj, const Material &material) {
 	obj.id = scene.next_entity_id++;

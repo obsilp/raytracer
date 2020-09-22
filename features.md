@@ -1,8 +1,8 @@
 next:
 - global illumination
     - indirect specular
-- ambient occlusion
 - importance sampling
+    - https://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf
 
 future:
 - reflection

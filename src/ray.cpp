@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include "camera.h"
+#include "config.h"
 #include "math.h"
 #include "scene.h"
 
@@ -39,7 +40,8 @@ glm::vec3 calc_surface_color(const HitRecord &hit, const Camera &camera, const g
 	}
 }
 
-glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, Stats &stats, int max_depth) {
+glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, const Config &cfg,
+					Stats &stats, int max_depth) {
 	if (max_depth <= 0)
 		return glm::vec3(0);
 
@@ -109,11 +111,32 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, St
 		dir = glm::normalize(dir);
 
 		auto indirect_ray = secondary_ray(hit->position, dir);
-		auto indirect = ray_color(indirect_ray, camera, scene, stats, max_depth - 1);
+		auto indirect = ray_color(indirect_ray, camera, scene, cfg, stats, max_depth - 1);
 		auto cos0 = glm::max(0.f, glm::dot(hit->normal, dir));
 
 		static const float p = 1.f / (2.f * PI);
 		indirect_color += (hit->material->color / PI) * indirect * cos0 / p;
+	}
+
+	// ambient occlusion
+	if (cfg.ambient_occlusion_samples > 0) {
+		auto tangent = create_tangent(hit->normal);
+		auto occlusions = 0.f;
+
+		for (auto i = 0; i < cfg.ambient_occlusion_samples; ++i) {
+			auto dir = uniform_sample_hemisphere(rand_float(), rand_float());
+			dir = glm::normalize(align_nbt(dir, hit->normal, tangent));
+
+			auto ambient_ray = secondary_ray(hit->position, dir);
+			auto ambient_hit = hit_scene(ambient_ray, scene, stats);
+			if (ambient_hit) {
+				auto dst = glm::min(ambient_hit->distance / 4.f, 1.f);
+				occlusions += 1.f - dst;
+			}
+		}
+
+		auto ao_factor = occlusions / static_cast<float>(cfg.ambient_occlusion_samples);
+		direct_color *= 1.f - ao_factor;
 	}
 
 	return glm::clamp(direct_color + indirect_color, 0.f, 1.f);

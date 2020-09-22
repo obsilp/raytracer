@@ -9,20 +9,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "camera.h"
+#include "config.h"
 #include "ray.h"
 #include "scene.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "stb_image_write.h"
-
-struct Config {
-	int width = 540;
-	int height = 540;
-
-	int samples_base = 5;
-	int max_depth = 5;
-};
 
 struct RenderingTask {
 	const Config &cfg;
@@ -63,7 +56,7 @@ void generate_image_part(RenderingTask &task) {
 					v += ((i / task.cfg.samples_base) + .5f) * pixel_size_y;
 
 					auto r = ray_from_camera(task.cam, u, v);
-					color += ray_color(r, task.cam, task.scene, task.stats, task.cfg.max_depth);
+					color += ray_color(r, task.cam, task.scene, task.cfg, task.stats, task.cfg.max_depth);
 				}
 
 				color /= samples2;
@@ -116,7 +109,6 @@ int main() {
 	init_camera(cam, cfg.width, cfg.height);
 
 	Scene scene;
-	scene.ambient_light = {0, 0, 0};
 
 	// floor
 	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
