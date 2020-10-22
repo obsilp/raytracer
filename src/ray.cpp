@@ -106,8 +106,7 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, co
 	// indirect diffuse lighting
 	if (max_depth > 1) {
 		auto dir = uniform_sample_hemisphere(rand_float(), rand_float());
-		auto tangent = create_tangent(hit->normal);
-		dir = align_nbt(dir, hit->normal, tangent);
+		dir = align_tbn(dir, hit->normal, hit->tangent);
 		dir = glm::normalize(dir);
 
 		auto indirect_ray = secondary_ray(hit->position, dir);
@@ -120,12 +119,11 @@ glm::vec3 ray_color(const Ray &ray, const Camera &camera, const Scene &scene, co
 
 	// ambient occlusion
 	if (cfg.ambient_occlusion_samples > 0) {
-		auto tangent = create_tangent(hit->normal);
 		auto occlusions = 0.f;
 
 		for (auto i = 0; i < cfg.ambient_occlusion_samples; ++i) {
 			auto dir = uniform_sample_hemisphere(rand_float(), rand_float());
-			dir = glm::normalize(align_nbt(dir, hit->normal, tangent));
+			dir = glm::normalize(align_tbn(dir, hit->normal, hit->tangent));
 
 			auto ambient_ray = secondary_ray(hit->position, dir);
 			auto ambient_hit = hit_scene(ambient_ray, scene, stats);

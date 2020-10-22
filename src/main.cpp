@@ -114,28 +114,28 @@ int main() {
 	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
 			{0, 0, 0},
 			{0, 1, 0},
-			{0, 0, 1},
+			{1, 0, 0},
 			{10, 10}
 	));
 	// back
 	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
 			{0, 5, 5},
 			{0, 0, -1},
-			{0, 1, 0},
+			{1, 0, 0},
 			{10, 10}
 	));
 	// ceiling
 	add_plane(scene, make_mat_lambert({1, 1, 1}), make_rect(
 			{0, 10, 0},
 			{0, -1, 0},
-			{0, 0, 1},
+			{-1, 0, 0},
 			{10, 10}
 	));
 	// left
 	add_plane(scene, make_mat_lambert({1, 0, 0}), make_rect(
 			{-5, 5, 0},
 			{1, 0, 0},
-			{0, 1, 0},
+			{0, -1, 0},
 			{10, 10}
 	));
 	// right

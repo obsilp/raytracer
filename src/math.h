@@ -3,6 +3,7 @@
 #include <random>
 #include <glm/common.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/matrix.hpp>
 
 #undef INFINITY
 
@@ -25,21 +26,17 @@ static inline float rand_float() {
 }
 
 static inline glm::vec3 uniform_sample_hemisphere(float u1, float u2) {
-	auto r = glm::sqrt(1.f - u1 * u1);
+	auto sin_theta = glm::sqrt(u1);
+	auto cos_theta = glm::sqrt(1.f - u1);
 	auto phi = 2.f * PI * u2;
-	return {glm::cos(phi) * r, u1, glm::sin(phi) * r};
+	return {sin_theta * glm::cos(phi), cos_theta, sin_theta * glm::sin(phi)};
 }
 
-static inline glm::vec3 create_tangent(const glm::vec3 &normal) {
-	glm::vec3 tangent;
-	if (glm::abs(normal.x) > glm::abs(normal.y))
-		tangent = {normal.z, 0, -normal.x};
-	else
-		tangent = {0, -normal.z, normal.y};
-	return glm::normalize(tangent);
-}
-
-static inline glm::vec3 align_nbt(const glm::vec3 &v, const glm::vec3 &n, const glm::vec3 &t) {
+static inline glm::vec3 align_tbn(const glm::vec3 &v, const glm::vec3 &n, const glm::vec3 &t) {
 	auto b = glm::cross(n, t);
-	return v.x * n + v.y * b + v.z * t;
+	return {
+			v.x * t.x + v.y * n.x + v.z * b.x,
+			v.x * t.y + v.y * n.y + v.z * b.y,
+			v.x * t.z + v.y * n.z + v.z * b.z,
+	};
 }

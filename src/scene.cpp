@@ -51,6 +51,7 @@ std::optional<HitRecord> hit_spheres(const Ray &ray, const Scene &scene, float c
 			.distance = closest,
 			.position = pos,
 			.normal = normal,
+			.tangent = glm::cross(ray.direction, normal),
 			.front_facing = front_facing,
 			.material = &scene.sphere_materials[obj_idx],
 	};
@@ -84,8 +85,10 @@ std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float cl
 
 	if (obj_idx == -1) return {};
 
+	const auto &plane = scene.planes[obj_idx];
+
 	auto pos = ray_at(ray, closest);
-	auto normal = scene.planes[obj_idx].normal;
+	auto normal = plane.normal;
 	auto front_facing = glm::dot(ray.direction, normal) < 0;
 	if (!front_facing) normal = -normal;
 
@@ -94,6 +97,7 @@ std::optional<HitRecord> hit_planes(const Ray &ray, const Scene &scene, float cl
 			.distance = closest,
 			.position = pos,
 			.normal = normal,
+			.tangent = plane.tangent,
 			.front_facing = front_facing,
 			.material = &scene.plane_materials[obj_idx],
 	};
